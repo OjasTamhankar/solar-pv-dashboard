@@ -1,4 +1,5 @@
 import json, os
+import threading, time
 import urllib.parse, urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -16,6 +17,10 @@ app = FastAPI(title="Solar PV Monitoring & Generation Forecasting", version="1.0
 frontend_origins = [origin.strip() for origin in os.getenv("SOLAR_FRONTEND_ORIGINS", "").split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", *frontend_origins], allow_methods=["*"], allow_headers=["*"])
 provider = CSVWeatherProvider(str(CSV_PATH))
+LIVE_WEATHER_CACHE_SECONDS = 600
+live_weather_cache = None
+live_weather_cache_at = 0.0
+live_weather_lock = threading.Lock()
 
 def load_config():
     if CONFIG_PATH.exists():
@@ -58,10 +63,18 @@ def fetch_karad_weather():
 
 @app.get("/api/weather/karad-current")
 def karad_current_weather():
-    try:
-        return fetch_karad_weather()
-    except Exception as exc:
-        raise HTTPException(status_code=502,detail=f"Karad live temperature is unavailable: {exc}")
+    global live_weather_cache, live_weather_cache_at
+    with live_weather_lock:
+        if live_weather_cache and time.monotonic() - live_weather_cache_at < LIVE_WEATHER_CACHE_SECONDS:
+            return live_weather_cache
+        try:
+            live_weather_cache = fetch_karad_weather()
+            live_weather_cache_at = time.monotonic()
+            return live_weather_cache
+        except Exception as exc:
+            if live_weather_cache:
+                return {**live_weather_cache, "stale": True}
+            raise HTTPException(status_code=502,detail=f"Karad live temperature is unavailable: {exc}")
 
 @app.post("/api/weather/upload")
 async def upload_weather(file: UploadFile = File(...)):
