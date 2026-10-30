@@ -1,0 +1,23 @@
+# JavaScript build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local settings and uploaded datasets
+.env
+data/weather.csv
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
