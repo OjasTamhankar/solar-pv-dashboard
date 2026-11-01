@@ -11,3 +11,5 @@ services:
         value: 3.12.7
       - key: SOLAR_FRONTEND_ORIGINS
         sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false

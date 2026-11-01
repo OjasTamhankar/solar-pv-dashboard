@@ -1,7 +1,7 @@
 import json, os
 import threading, time
 import urllib.parse, urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,14 +52,19 @@ def put_config(config: PlantConfig):
 def weather_status(): return current_provider().coverage()
 
 def fetch_karad_weather():
-    query=urllib.parse.urlencode({"latitude":17.28937,"longitude":74.18183,"current":"temperature_2m","timezone":"Asia/Kolkata"})
-    request=urllib.request.Request(f"https://api.open-meteo.com/v1/forecast?{query}",headers={"User-Agent":"SolarPVMonitor/1.0"})
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        raise ValueError("OpenWeather API key is missing. Set OPENWEATHER_API_KEY in the backend environment.")
+    query=urllib.parse.urlencode({"lat":17.28937,"lon":74.18183,"appid":api_key,"units":"metric"})
+    request=urllib.request.Request(f"https://api.openweathermap.org/data/2.5/weather?{query}",headers={"User-Agent":"SolarPVMonitor/1.0"})
     with urllib.request.urlopen(request,timeout=8) as response:
         payload=json.loads(response.read().decode("utf-8"))
-    current=payload.get("current",{})
-    temperature=current.get("temperature_2m")
+    current=payload.get("main",{})
+    temperature=current.get("temp")
     if temperature is None: raise ValueError("Live temperature is missing from the weather response")
-    return {"available":True,"city":"Karad","temperature_c":float(temperature),"timestamp":current.get("time"),"source":"Open-Meteo current conditions"}
+    observed_at=payload.get("dt")
+    timestamp=datetime.fromtimestamp(observed_at,timezone.utc).isoformat() if observed_at else None
+    return {"available":True,"city":"Karad","temperature_c":float(temperature),"timestamp":timestamp,"source":"OpenWeather current conditions"}
 
 @app.get("/api/weather/karad-current")
 def karad_current_weather():

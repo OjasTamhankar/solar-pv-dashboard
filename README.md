@@ -18,7 +18,7 @@ The API defaults to the included `SOLAR_WEATHER_CSV.csv`. Upload a CSV with **Ad
 The app uses a React frontend and a FastAPI backend, so deploy both services:
 
 1. Push this repository to GitHub.
-2. In Render, create a Blueprint from the repository. `render.yaml` creates the API service. Set `SOLAR_FRONTEND_ORIGINS` to the public Netlify site origin (for example, `https://your-site.netlify.app`) when prompted.
+2. In Render, create a Blueprint from the repository. `render.yaml` creates the API service. Set `SOLAR_FRONTEND_ORIGINS` to the public Netlify site origin (for example, `https://your-site.netlify.app`) when prompted. Add `OPENWEATHER_API_KEY` from your OpenWeather account as a Render environment variable.
 3. In Netlify, import the same repository. `netlify.toml` sets the frontend build and publish directory.
 4. In Netlify site environment variables, set `VITE_API_BASE_URL` to the Render service origin (for example, `https://solar-pv-api.onrender.com`), then trigger a new deploy.
 
@@ -28,7 +28,7 @@ The Render API includes the sample weather CSV from this repository. Uploaded we
 
 The CSV requires `period_end`, `gti` (W/m²), and `air_temp` (°C). ISO timestamps with offsets are normalized to the configured plant timezone (`Asia/Kolkata` initially); invalid records are dropped, duplicates keep their last source row, and remaining records are sorted. The actual next chronological record drives the deterministic forecast.
 
-The displayed current Karad temperature comes from Open-Meteo current conditions at Karad coordinates. This display-only reading is returned by `/api/weather/karad-current` and is never passed to generation or CSV forecast calculations. The forecast table shows both the live Karad reading and the timestamp-specific CSV ambient input used by the model. If the live service is unavailable, the live value shows unavailable rather than substituting CSV data.
+The displayed current Karad temperature comes from OpenWeather current conditions at Karad coordinates. Set `OPENWEATHER_API_KEY` in the backend environment; do not commit the key. This display-only reading is returned by `/api/weather/karad-current` and is never passed to generation or CSV forecast calculations. The forecast table shows both the live Karad reading and the timestamp-specific CSV ambient input used by the model. If the live service is unavailable, the live value shows unavailable rather than substituting CSV data.
 
 Current dashboard selection uses the matching date/time one year earlier, then nearest record on that same date, then the configured reference date. The dashboard identifies unavailable data explicitly. Daily energy is the integral over records available on the selected date and is labeled as partial day. Forecast interval energy holds next-record power constant for the actual interval.
 
